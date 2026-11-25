@@ -55,11 +55,26 @@ export const MobileNav: React.FC<MobileNavProps> = ({
       setConfirmLogout(false);
       return;
     }
+
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevBodyOverscroll = document.body.style.overscrollBehavior;
+
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+    document.body.style.overscrollBehavior = 'none';
+
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setIsMenuOpen(false);
     };
     window.addEventListener('keydown', handleEsc);
-    return () => window.removeEventListener('keydown', handleEsc);
+
+    return () => {
+      document.documentElement.style.overflow = prevHtmlOverflow;
+      document.body.style.overflow = prevBodyOverflow;
+      document.body.style.overscrollBehavior = prevBodyOverscroll;
+      window.removeEventListener('keydown', handleEsc);
+    };
   }, [isMenuOpen]);
 
   const handleProtectedAction = (action: () => void) => {
@@ -98,14 +113,19 @@ export const MobileNav: React.FC<MobileNavProps> = ({
       {/* Full-Feature Slide-Up Drawer for Mobile & Tablet (< lg) */}
       {isMenuOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end justify-center animate-in fade-in duration-150"
-          onClick={() => setIsMenuOpen(false)}
+          className="lg:hidden fixed inset-0 z-50 flex items-end justify-center overscroll-none animate-in fade-in duration-150"
           role="dialog"
           aria-modal="true"
           aria-label="Mobile navigation menu"
         >
+          {/* Backdrop blocks touch pass-through scrolling to page behind drawer */}
           <div
-            className="w-full max-w-lg bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 max-h-[85vh] overflow-y-auto pb-[max(1.25rem,env(safe-area-inset-bottom,1.25rem))]"
+            className="absolute inset-0 bg-slate-900/50 backdrop-blur-xs touch-none"
+            onClick={() => setIsMenuOpen(false)}
+            aria-hidden="true"
+          />
+          <div
+            className="relative z-10 w-full max-w-lg bg-white rounded-t-3xl shadow-2xl border-t border-slate-200 max-h-[85vh] overflow-y-auto overscroll-contain pb-[max(1.25rem,env(safe-area-inset-bottom,1.25rem))]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Drawer Drag Handle & Title */}
