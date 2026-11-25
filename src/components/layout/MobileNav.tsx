@@ -48,9 +48,13 @@ export const MobileNav: React.FC<MobileNavProps> = ({
   const { user, isAuthenticated, logout } = useAuth();
   const isAdmin = user?.role === 'admin';
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   useEffect(() => {
-    if (!isMenuOpen) return;
+    if (!isMenuOpen) {
+      setConfirmLogout(false);
+      return;
+    }
     const handleEsc = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setIsMenuOpen(false);
     };
@@ -235,20 +239,45 @@ export const MobileNav: React.FC<MobileNavProps> = ({
                 })}
               </div>
 
-              {/* Log Out Button */}
+              {/* Subtle Log Out Button with Inline Confirmation */}
               {isAuthenticated && (
-                <button
-                  type="button"
-                  onClick={async () => {
-                    setIsMenuOpen(false);
-                    await logout();
-                    onNavigate('home');
-                  }}
-                  className="w-full py-2.5 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold flex items-center justify-center gap-2 transition-colors cursor-pointer"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Log Out</span>
-                </button>
+                confirmLogout ? (
+                  <div className="w-full rounded-xl border border-rose-200 bg-rose-50/70 p-2.5 flex items-center justify-between gap-2">
+                    <span className="text-xs font-semibold text-slate-700 pl-1">
+                      Log out of UniMart?
+                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => setConfirmLogout(false)}
+                        className="px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          setConfirmLogout(false);
+                          setIsMenuOpen(false);
+                          await logout();
+                          onNavigate('home');
+                        }}
+                        className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        Yes, Log Out
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmLogout(true)}
+                    className="w-full py-2.5 px-4 rounded-xl border border-slate-200 bg-slate-50/80 hover:bg-rose-50/70 hover:border-rose-200 text-slate-500 hover:text-rose-700 text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Log Out</span>
+                  </button>
+                )
               )}
             </div>
           </div>
