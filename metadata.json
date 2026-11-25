@@ -1,0 +1,6 @@
+{
+  "name": "UniMart - University Community Marketplace",
+  "description": "A trusted multi-university marketplace for students and teachers to buy, sell, and access campus services safely.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

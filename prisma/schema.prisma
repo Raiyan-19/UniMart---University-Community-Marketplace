@@ -1,0 +1,293 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model University {
+  id              String           @id
+  name            String
+  shortName       String
+  domain          String
+  location        String           @default("")
+  logo            String           @default("🏛️")
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  departments     Department[]
+  users           User[]
+  products        Product[]
+  services        CampusService[]
+  graduationSales GraduationSale[]
+}
+
+model Department {
+  id           String     @id
+  name         String
+  code         String
+  universityId String
+  university   University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  users        User[]
+  products     Product[]
+
+  @@index([universityId])
+}
+
+model User {
+  id                      String           @id
+  name                    String
+  email                   String           @unique
+  passwordHash            String
+  salt                    String
+  role                    String           @default("student") // student | teacher | admin
+  universityId            String
+  university              University       @relation(fields: [universityId], references: [id])
+  departmentId            String
+  department              Department       @relation(fields: [departmentId], references: [id])
+  phone                   String           @default("")
+  avatar                  String           @default("")
+  bio                     String           @default("")
+  studentId               String?
+  designation             String?
+  currentSemester         String?
+  isEmailVerified         Boolean          @default(false)
+  emailVerificationToken  String?
+  emailVerificationExpires DateTime?
+  resetPasswordToken      String?
+  resetPasswordExpires    DateTime?
+  isVerified              Boolean          @default(false)
+  status                  String           @default("active") // active | suspended | pending
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
+  products                Product[]
+  wishlists               Wishlist[]
+  offersSent              Offer[]          @relation("OfferBuyer")
+  offersReceived          Offer[]          @relation("OfferSeller")
+  transactionsBought      Transaction[]    @relation("TransactionBuyer")
+  transactionsSold        Transaction[]    @relation("TransactionSeller")
+  reviewsWritten          Review[]         @relation("Reviewer")
+  reviewsReceived         Review[]         @relation("ReviewTarget")
+  services                CampusService[]
+  graduationSales         GraduationSale[]
+  notifications           Notification[]
+
+  @@index([universityId])
+  @@index([role])
+}
+
+model Product {
+  id            String        @id
+  sellerId      String
+  seller        User          @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  universityId  String
+  university    University    @relation(fields: [universityId], references: [id])
+  departmentId  String
+  department    Department    @relation(fields: [departmentId], references: [id])
+  title         String
+  description   String
+  category      String
+  price         Float
+  originalPrice Float?
+  condition     String
+  location      String        @default("")
+  images        String[]      @default([])
+  features      String[]      @default([])
+  status        String        @default("active") // active | sold | inactive | suspended
+  views         Int           @default(0)
+  saves         Int           @default(0)
+  sellerType    String        @default("student") // student | teacher
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  wishlists     Wishlist[]
+  offers        Offer[]
+  transactions  Transaction[]
+
+  @@index([universityId, status])
+  @@index([sellerId])
+  @@index([category])
+}
+
+model Wishlist {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, productId])
+  @@index([userId])
+}
+
+model Offer {
+  id          String       @id
+  productId   String
+  product     Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  buyerId     String
+  buyer       User         @relation("OfferBuyer", fields: [buyerId], references: [id], onDelete: Cascade)
+  sellerId    String
+  seller      User         @relation("OfferSeller", fields: [sellerId], references: [id], onDelete: Cascade)
+  amount      Float
+  notes       String?
+  status      String       @default("PENDING") // PENDING | ACCEPTED | REJECTED | CANCELLED | EXPIRED
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  transaction Transaction?
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([productId])
+}
+
+model Transaction {
+  id          String   @id
+  offerId     String   @unique
+  offer       Offer    @relation(fields: [offerId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  buyerId     String
+  buyer       User     @relation("TransactionBuyer", fields: [buyerId], references: [id])
+  sellerId    String
+  seller      User     @relation("TransactionSeller", fields: [sellerId], references: [id])
+  agreedPrice Float
+  status      String   @default("COMPLETED")
+  completedAt DateTime @default(now())
+}
+
+model Review {
+  id            String   @id
+  transactionId String?
+  productId     String?
+  reviewerId    String
+  reviewer      User     @relation("Reviewer", fields: [reviewerId], references: [id], onDelete: Cascade)
+  targetUserId  String
+  targetUser    User     @relation("ReviewTarget", fields: [targetUserId], references: [id], onDelete: Cascade)
+  rating        Int
+  comment       String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([targetUserId])
+}
+
+model Conversation {
+  id             String    @id
+  productId      String
+  participantIds String[]
+  lastMessage    String?
+  lastMessageAt  DateTime?
+  unreadCount    Json      @default("{}")
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  messages       Message[]
+}
+
+model Message {
+  id             String       @id
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  receiverId     String
+  content        String       @default("")
+  isOffer        Boolean      @default(false)
+  offerAmount    Float?
+  image          String?
+  isRead         Boolean      @default(false)
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
+}
+
+model Report {
+  id              String   @id
+  reporterId      String
+  targetType      String
+  targetId        String
+  reason          String
+  details         String?
+  status          String   @default("PENDING") // PENDING | RESOLVED | DISMISSED
+  resolutionNotes String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model CampusService {
+  id           String     @id
+  providerId   String
+  provider     User       @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  universityId String
+  university   University @relation(fields: [universityId], references: [id])
+  title        String
+  category     String
+  rate         String
+  location     String     @default("")
+  rating       Float      @default(5.0)
+  reviewsCount Int        @default(0)
+  description  String
+  status       String     @default("active")
+  createdAt    DateTime   @default(now())
+
+  @@index([universityId])
+}
+
+model ServiceCategory {
+  name      String   @id
+  createdAt DateTime @default(now())
+}
+
+model GraduationSale {
+  id                 String     @id
+  studentId          String
+  student            User       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  universityId       String
+  university         University @relation(fields: [universityId], references: [id])
+  departmentCode     String
+  graduatingTerm     String
+  quote              String
+  itemCount          Int        @default(0)
+  featuredProductIds String[]   @default([])
+  createdAt          DateTime   @default(now())
+}
+
+model Guide {
+  id        String   @id
+  category  String   // freshers | trade | safety | faq
+  title     String
+  summary   String
+  content   String
+  order     Int      @default(0)
+  updatedAt DateTime @updatedAt
+}
+
+model Notification {
+  id        String   @id
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  link      String?
+  avatar    String?
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+}
+
+model AuditLog {
+  id          String   @id
+  adminId     String
+  adminName   String
+  action      String
+  targetType  String
+  targetId    String?
+  targetTitle String?
+  details     String?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+}
