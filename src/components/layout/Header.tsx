@@ -15,6 +15,8 @@ import {
   Tag,
   ArrowRight,
   Loader2,
+  Layers,
+  Heart,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useUniversity } from '../../context/UniversityContext';
@@ -558,6 +560,28 @@ export const Header: React.FC<HeaderProps> = ({
                   >
                     <UserIcon className="w-4 h-4 text-slate-400" />
                     <span>My Profile</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      onNavigate('my-listings');
+                      setShowUserDropdown(false);
+                    }}
+                    className="w-full text-left px-3.5 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors"
+                  >
+                    <Layers className="w-4 h-4 text-slate-400" />
+                    <span>My Listings</span>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      onNavigate('saved');
+                      setShowUserDropdown(false);
+                    }}
+                    className="w-full text-left px-3.5 py-2 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2.5 transition-colors"
+                  >
+                    <Heart className="w-4 h-4 text-slate-400" />
+                    <span>Saved Items</span>
                   </button>
 
                   <button

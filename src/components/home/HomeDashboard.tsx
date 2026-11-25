@@ -17,6 +17,9 @@ import {
   ShieldCheck,
   CheckCircle2,
   Building2,
+  GraduationCap,
+  Layers,
+  HelpCircle,
 } from 'lucide-react';
 import { Product } from '../../types';
 import { productsApi } from '../../services/api';
@@ -345,6 +348,69 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, onOpen
             </div>
           </div>
         )}
+      </div>
+
+      {/* Mobile & Tablet Quick-Access Feature Strip (hidden on lg desktop where Sidebar is visible) */}
+      <div className="lg:hidden -mx-3 px-3 sm:mx-0 sm:px-0">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1">
+          <button
+            type="button"
+            onClick={() => onNavigate('graduating-sale')}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200/80 text-emerald-900 text-xs font-bold whitespace-nowrap shrink-0 shadow-2xs transition cursor-pointer"
+          >
+            <GraduationCap className="w-3.5 h-3.5 text-emerald-700" />
+            <span>Graduating Sale</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onNavigate('services')}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-semibold whitespace-nowrap shrink-0 shadow-2xs transition cursor-pointer"
+          >
+            <Wrench className="w-3.5 h-3.5 text-emerald-700" />
+            <span>Services</span>
+          </button>
+
+          {isAuthenticated && (
+            <>
+              <button
+                type="button"
+                onClick={() => onNavigate('saved')}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-semibold whitespace-nowrap shrink-0 shadow-2xs transition cursor-pointer"
+              >
+                <Heart className="w-3.5 h-3.5 text-rose-500" />
+                <span>Saved</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => onNavigate('my-listings')}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-semibold whitespace-nowrap shrink-0 shadow-2xs transition cursor-pointer"
+              >
+                <Layers className="w-3.5 h-3.5 text-emerald-700" />
+                <span>My Listings</span>
+              </button>
+            </>
+          )}
+
+          <button
+            type="button"
+            onClick={() => onNavigate('guides')}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-semibold whitespace-nowrap shrink-0 shadow-2xs transition cursor-pointer"
+          >
+            <BookOpen className="w-3.5 h-3.5 text-emerald-700" />
+            <span>Guides</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onNavigate('help')}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-800 text-xs font-semibold whitespace-nowrap shrink-0 shadow-2xs transition cursor-pointer"
+          >
+            <HelpCircle className="w-3.5 h-3.5 text-emerald-700" />
+            <span>Help & Support</span>
+          </button>
+        </div>
       </div>
 
       {/* Browse by Category */}
