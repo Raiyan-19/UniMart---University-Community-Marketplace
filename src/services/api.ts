@@ -82,7 +82,11 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
         window.dispatchEvent(new CustomEvent('unimart:unauthorized'));
       }
     }
-    throw new Error(data.error || `HTTP error! Status: ${response.status}`);
+    const detailMsg =
+      data.details && typeof data.details === 'object'
+        ? Object.values(data.details).filter((v): v is string => typeof v === 'string' && v.length > 0).join('. ')
+        : '';
+    throw new Error(detailMsg || data.error || `HTTP error! Status: ${response.status}`);
   }
 
   return data as T;

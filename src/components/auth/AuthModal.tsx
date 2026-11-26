@@ -21,6 +21,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useUniversity } from '../../context/UniversityContext';
 import { useToast } from '../../context/ToastContext';
+import { validateRegistration } from '../../utils/validation';
 
 export type AuthMode = 'login' | 'register' | 'verify' | 'verified_success' | 'forgot_password';
 
@@ -37,7 +38,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 }) => {
   const { login, register, verifyEmail, resendVerificationCode, requiresEmailVerification, unverifiedUser, user } = useAuth();
   const { universities, departments, getDepartmentsForUniversity } = useUniversity();
-  const { success, error } = useToast();
+  const { success, error, info } = useToast();
 
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [showPassword, setShowPassword] = useState(false);
@@ -64,7 +65,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   // OTP Verification state
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [resendTimer, setResendTimer] = useState(42);
+  const [resendTimer, setResendTimer] = useState(0);
   const [otpHint, setOtpHint] = useState<string | null>(null);
   const [emailNotice, setEmailNotice] = useState<{ sent: boolean; error?: string } | null>(null);
 
@@ -103,13 +104,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     return () => clearInterval(interval);
   }, [mode, resendTimer]);
 
-  // Update department selection when university changes
+  // Ensure selected university and department remain valid as data loads
+  useEffect(() => {
+    if (universities.length > 0 && !universities.some((u) => u.id === selectedUnivId)) {
+      setSelectedUnivId(universities[0].id);
+    }
+  }, [universities, selectedUnivId]);
+
   useEffect(() => {
     const availableDepts = getDepartmentsForUniversity(selectedUnivId);
-    if (availableDepts.length > 0) {
+    if (availableDepts.length > 0 && !availableDepts.some((d) => d.id === selectedDeptId)) {
       setSelectedDeptId(availableDepts[0].id);
     }
-  }, [selectedUnivId, getDepartmentsForUniversity]);
+  }, [selectedUnivId, departments, selectedDeptId, getDepartmentsForUniversity]);
 
   if (!isOpen) return null;
 
@@ -135,6 +142,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         setEmailNotice(null);
         setOtpHint(null);
         setOtp(['', '', '', '', '', '']);
+        setResendTimer(0);
         setMode('verify');
       }
     }
@@ -151,18 +159,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       return;
     }
 
-    setIsSubmitting(true);
-    const res = await register({
-      name,
-      email: regEmail,
+    const payload = {
+      name: name.trim(),
+      email: regEmail.trim(),
       password: regPassword,
       role,
       universityId: selectedUnivId,
       departmentId: selectedDeptId,
-      phone,
-      studentId: role === 'student' ? studentId : undefined,
-      designation: role === 'teacher' ? designation : undefined,
-    });
+      phone: phone.trim(),
+      studentId: role === 'student' ? studentId.trim() : undefined,
+      designation: role === 'teacher' ? designation.trim() : undefined,
+    };
+
+    const validation = validateRegistration(payload);
+    if (!validation.isValid) {
+      const firstMsg = Object.values(validation.errors)[0] || 'Please check your registration details.';
+      error('Invalid Registration Details', firstMsg);
+      return;
+    }
+
+    setIsSubmitting(true);
+    const res = await register(payload);
     setIsSubmitting(false);
 
     if (res.success) {
@@ -380,7 +397,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           </div>
 
           {/* Right Interactive Form Column */}
-          <div className="lg:col-span-7 p-4 sm:p-8 lg:p-10 flex flex-col justify-center bg-white overflow-y-auto max-h-[85vh]">
+          <div className="lg:col-span-7 p-4 sm:p-8 lg:p-10 flex flex-col bg-white overflow-y-auto max-h-[85vh]">
+            <div className="my-auto w-full">
             {/* 1. LOGIN MODE */}
             {mode === 'login' && (
               <div className="space-y-6">
@@ -513,8 +531,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <div className="text-center pt-2 text-xs text-slate-600">
                   Don&apos;t have an account?{' '}
                   <button
+                    type="button"
                     onClick={() => setMode('register')}
-                    className="text-emerald-700 font-bold hover:underline"
+                    className="text-emerald-700 font-bold hover:underline cursor-pointer"
                   >
                     Sign Up
                   </button>
@@ -751,7 +770,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         className="rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5 mt-0.5"
                       />
                       <span>
-                        I agree to the <a href="#terms" className="text-emerald-700 underline font-semibold">Terms & Conditions</a> and <a href="#privacy" className="text-emerald-700 underline font-semibold">Privacy Policy</a>
+                        I agree to the{' '}
+                        <a
+                          href="#terms"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            info('Terms & Conditions', 'Trade honestly within your campus community and verify items in person before payment.');
+                          }}
+                          className="text-emerald-700 underline font-semibold"
+                        >
+                          Terms &amp; Conditions
+                        </a>{' '}
+                        and{' '}
+                        <a
+                          href="#privacy"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            info('Privacy Policy', 'Your email and campus profile are used only for UniMart verification and buyer-seller communication.');
+                          }}
+                          className="text-emerald-700 underline font-semibold"
+                        >
+                          Privacy Policy
+                        </a>
                       </span>
                     </label>
                   </div>
@@ -769,8 +809,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <div className="text-center pt-2 text-xs text-slate-600">
                   Already have an account?{' '}
                   <button
+                    type="button"
                     onClick={() => setMode('login')}
-                    className="text-emerald-700 font-bold hover:underline"
+                    className="text-emerald-700 font-bold hover:underline cursor-pointer"
                   >
                     Log In
                   </button>
@@ -996,14 +1037,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
                 <div className="text-center text-xs">
                   <button
+                    type="button"
                     onClick={() => setMode('login')}
-                    className="text-emerald-700 font-bold hover:underline"
+                    className="text-emerald-700 font-bold hover:underline cursor-pointer"
                   >
                     ← Back to Login
                   </button>
                 </div>
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>
