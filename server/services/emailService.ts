@@ -214,7 +214,10 @@ async function sendViaBrevo(options: VerificationEmailOptions): Promise<EmailSen
     return { success: false, provider: 'brevo', error: 'Missing BREVO_API_KEY.' };
   }
 
-  const senderEmail = process.env.BREVO_FROM || process.env.EMAIL_FROM || 'no-reply@unimart.edu';
+  const rawSender = (process.env.BREVO_FROM || process.env.EMAIL_FROM || 'no-reply@unimart.edu').trim();
+  const angleMatch = rawSender.match(/^(.*?)\s*<([^>]+)>$/);
+  const senderName = angleMatch && angleMatch[1].trim() ? angleMatch[1].trim().replace(/^["']|["']$/g, '') : 'UniMart Support';
+  const senderEmail = angleMatch ? angleMatch[2].trim() : rawSender;
   const subject = `UniMart Verification Code: ${options.code}`;
   const html = generateVerificationEmailHtml(options);
   const text = `Your UniMart verification code is: ${options.code}. This code expires in 15 minutes. Never share this code with anyone.`;
@@ -227,7 +230,7 @@ async function sendViaBrevo(options: VerificationEmailOptions): Promise<EmailSen
         'api-key': apiKey,
       },
       body: JSON.stringify({
-        sender: { name: 'UniMart Support', email: senderEmail },
+        sender: { name: senderName, email: senderEmail },
         to: [{ email: options.to, name: options.name }],
         subject,
         htmlContent: html,
@@ -262,12 +265,15 @@ async function sendViaBrevo(options: VerificationEmailOptions): Promise<EmailSen
 function getSmtpTransporter(): Transporter | null {
   if (cachedTransporter) return cachedTransporter;
 
-  const gmailUser = process.env.GMAIL_USER;
-  const gmailPass = process.env.GMAIL_APP_PASSWORD;
+  const gmailUser = process.env.GMAIL_USER?.trim();
+  const gmailPass = process.env.GMAIL_APP_PASSWORD?.replace(/\s+/g, '');
 
   if (gmailUser && gmailPass) {
     cachedTransporter = nodemailer.createTransport({
       service: 'gmail',
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
       auth: {
         user: gmailUser,
         pass: gmailPass,
@@ -276,8 +282,8 @@ function getSmtpTransporter(): Transporter | null {
     return cachedTransporter;
   }
 
-  const host = process.env.SMTP_HOST;
-  const user = process.env.SMTP_USER;
+  const host = process.env.SMTP_HOST?.trim();
+  const user = process.env.SMTP_USER?.trim();
   const pass = process.env.SMTP_PASS;
 
   if (host && user && pass) {
@@ -288,6 +294,9 @@ function getSmtpTransporter(): Transporter | null {
       host,
       port,
       secure,
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000,
       auth: { user, pass },
     });
     return cachedTransporter;
