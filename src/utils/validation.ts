@@ -1,4 +1,4 @@
-import { UserRole, RegisterPayload } from '../types';
+import { RegisterPayload } from '../types';
 
 export interface ValidationResult {
   isValid: boolean;

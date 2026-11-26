@@ -3,14 +3,8 @@ import {
   Search,
   Send,
   BadgeDollarSign,
-  CheckCircle2,
-  XCircle,
-  ExternalLink,
   ShieldCheck,
-  User,
   ShoppingBag,
-  Clock,
-  Sparkles,
   ArrowLeft,
 } from 'lucide-react';
 import { Conversation, ChatMessage, Product } from '../../types';
@@ -25,7 +19,6 @@ interface MessagesChatViewProps {
 }
 
 export const MessagesChatView: React.FC<MessagesChatViewProps> = ({
-  initialProductId,
   onViewProduct,
   onOpenMakeOffer,
 }) => {
@@ -172,7 +165,7 @@ export const MessagesChatView: React.FC<MessagesChatViewProps> = ({
     }
   };
 
-  const handleAcceptOffer = async (offerAmount?: number) => {
+  const handleAcceptOffer = async (_offerAmount?: number) => {
     try {
       // Find offer in user offers
       const offersRes = await offersApi.getUserOffers('received');

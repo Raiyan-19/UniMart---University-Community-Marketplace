@@ -8,7 +8,6 @@ import {
   Eye,
   TrendingUp,
   AlertCircle,
-  MoreVertical,
 } from 'lucide-react';
 import { Product } from '../../types';
 import { productsApi } from '../../services/api';

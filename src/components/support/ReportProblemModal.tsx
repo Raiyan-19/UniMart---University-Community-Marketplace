@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Flag, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { X, Flag, AlertCircle } from 'lucide-react';
 import { reportsApi } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { Product } from '../../types';
@@ -14,9 +14,7 @@ export const ReportProblemModal: React.FC<ReportProblemModalProps> = ({
   targetProduct,
 }) => {
   const { showToast } = useToast();
-  const [targetType, setTargetType] = useState<'listing' | 'user' | 'service' | 'system'>(
-    targetProduct ? 'listing' : 'system'
-  );
+  const targetType: 'listing' | 'user' | 'service' | 'system' = targetProduct ? 'listing' : 'system';
   const [reason, setReason] = useState('Inappropriate Content or Item');
   const [details, setDetails] = useState('');
   const [submitting, setSubmitting] = useState(false);

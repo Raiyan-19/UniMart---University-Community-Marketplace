@@ -4,14 +4,11 @@ import {
   ChevronDown,
   Mail,
   Flag,
-  ShieldCheck,
   CheckCircle2,
   Clock,
-  Sparkles,
   ExternalLink,
   X,
   HelpCircle,
-  MessageSquare,
 } from 'lucide-react';
 
 interface HelpSupportViewProps {

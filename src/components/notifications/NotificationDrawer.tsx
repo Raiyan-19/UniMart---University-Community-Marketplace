@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   Bell,
   Star,
-  GraduationCap,
 } from 'lucide-react';
 import { Notification, NotificationType } from '../../types';
 import { notificationApi } from '../../services/api';
@@ -32,13 +31,11 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
 }) => {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [filter, setFilter] = useState<string>('all');
-  const [isLoading, setIsLoading] = useState(false);
   const { success, error } = useToast();
   const drawerRef = useRef<HTMLDivElement>(null);
 
   const loadNotifications = useCallback(async () => {
     try {
-      setIsLoading(true);
       const res = await notificationApi.getAll();
       if (res.success && res.data) {
         setNotifications(res.data);
@@ -49,8 +46,6 @@ export const NotificationDrawer: React.FC<NotificationDrawerProps> = ({
       }
     } catch (e: any) {
       console.error('Failed to load notifications:', e);
-    } finally {
-      setIsLoading(false);
     }
   }, [onUpdateUnreadCount]);
 

@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { db } from '../../server/db/store';
 import { register, login, logout, verifyEmail } from '../../server/controllers/authController';
 import { getProducts, getProductById, createProduct, updateProduct } from '../../server/controllers/productController';
-import { getConversations, getConversationMessages, sendMessage, startConversationForProduct } from '../../server/controllers/chatController';
+import { getConversationMessages, sendMessage, startConversationForProduct } from '../../server/controllers/chatController';
 import { getNotifications, markAsRead } from '../../server/controllers/notificationController';
-import { getAllUsers, getAdminStats } from '../../server/controllers/userController';
+import { getAdminStats } from '../../server/controllers/userController';
 
 function createMockRes() {
   const res: any = {

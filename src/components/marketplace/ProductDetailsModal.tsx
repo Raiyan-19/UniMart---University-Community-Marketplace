@@ -11,9 +11,7 @@ import {
   Share2,
   Flag,
   CheckCircle2,
-  Tag,
   Phone,
-  User as UserIcon,
 } from 'lucide-react';
 import { Product } from '../../types';
 import { useAuth } from '../../context/AuthContext';

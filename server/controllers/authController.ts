@@ -141,6 +141,7 @@ export async function register(req: Request, res: Response): Promise<void> {
     });
 
     const isDev = process.env.NODE_ENV !== 'production';
+    const allowOtpPreview = isDev || process.env.ALLOW_DEMO_OTP_PREVIEW === 'true';
     const formattedUser = await formatUserResponse(createdUser);
 
     if (!emailResult.success) {
@@ -155,7 +156,7 @@ export async function register(req: Request, res: Response): Promise<void> {
         data: { user: formattedUser },
         token,
         requiresEmailVerification: true,
-        otpPreview: isDev ? otp : undefined,
+        otpPreview: allowOtpPreview ? otp : undefined,
       });
       return;
     }
@@ -169,7 +170,7 @@ export async function register(req: Request, res: Response): Promise<void> {
       data: { user: formattedUser },
       token,
       requiresEmailVerification: true,
-      otpPreview: isDev ? otp : undefined,
+      otpPreview: allowOtpPreview ? otp : undefined,
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -378,8 +379,26 @@ export async function resendVerificationCode(req: Request, res: Response): Promi
       universityName: univ?.name || 'Your University',
     });
 
+    const isDev = process.env.NODE_ENV !== 'production';
+    const allowOtpPreview = isDev || process.env.ALLOW_DEMO_OTP_PREVIEW === 'true';
+
     if (!emailResult.success) {
       console.error(`[Auth] Resend OTP email failed for ${user.email}:`, emailResult.error);
+      if (process.env.ALLOW_DEMO_OTP_PREVIEW === 'true') {
+        await db.updateUser(user._id, {
+          emailVerificationToken: newOtp,
+          emailVerificationExpires: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+        });
+        res.json({
+          success: true,
+          emailSent: false,
+          emailDeliveryError: emailResult.error,
+          message: `Demo preview OTP generated because live email delivery is unconfigured: ${emailResult.error}`,
+          otpPreview: newOtp,
+          data: { otpPreview: newOtp },
+        });
+        return;
+      }
       res.status(502).json({
         success: false,
         emailSent: false,
@@ -393,16 +412,14 @@ export async function resendVerificationCode(req: Request, res: Response): Promi
       emailVerificationExpires: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
     });
 
-    const isDev = process.env.NODE_ENV !== 'production';
-
     res.json({
       success: true,
       emailSent: true,
       emailDeliveryProvider: emailResult.provider,
       message: `A fresh 6-digit verification code has been dispatched to ${user.email}.`,
-      otpPreview: isDev ? newOtp : undefined,
+      otpPreview: allowOtpPreview ? newOtp : undefined,
       data: {
-        otpPreview: isDev ? newOtp : undefined,
+        otpPreview: allowOtpPreview ? newOtp : undefined,
       },
     });
   } catch (error) {

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, BadgeDollarSign, ShieldCheck, Send, Check } from 'lucide-react';
+import { X, BadgeDollarSign, ShieldCheck, Send } from 'lucide-react';
 import { Product } from '../../types';
 import { offersApi } from '../../services/api';
 import { useToast } from '../../context/ToastContext';

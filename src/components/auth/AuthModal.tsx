@@ -72,14 +72,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [forgotEmail, setForgotEmail] = useState('');
 
   useEffect(() => {
-    if (initialMode) setMode(initialMode);
-  }, [initialMode]);
+    if (isOpen && !requiresEmailVerification && initialMode) {
+      setMode(initialMode);
+    }
+  }, [isOpen, initialMode, requiresEmailVerification]);
 
   useEffect(() => {
     if (requiresEmailVerification) {
       setMode('verify');
     }
   }, [requiresEmailVerification]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [isOpen, onClose]);
 
   // Countdown timer for OTP
   useEffect(() => {
@@ -110,16 +121,21 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     }
 
     setIsSubmitting(true);
-    const ok = await login({
+    const res = await login({
       email: loginEmail,
       password: loginPassword,
       rememberMe,
     });
     setIsSubmitting(false);
 
-    if (ok) {
-      if (!requiresEmailVerification) {
+    if (res.success) {
+      if (!res.requiresEmailVerification) {
         onClose();
+      } else {
+        setEmailNotice(null);
+        setOtpHint(null);
+        setOtp(['', '', '', '', '', '']);
+        setMode('verify');
       }
     }
   };
@@ -150,7 +166,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setIsSubmitting(false);
 
     if (res.success) {
-      if (res.otpPreview && import.meta.env.DEV) {
+      if (res.otpPreview) {
         setOtpHint(res.otpPreview);
       } else {
         setOtpHint(null);
@@ -255,7 +271,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setIsSubmitting(true);
     try {
       const newOtp = await resendVerificationCode();
-      if (newOtp && import.meta.env.DEV) {
+      if (newOtp) {
         setOtpHint(newOtp);
       }
       setEmailNotice({ sent: true });
@@ -277,8 +293,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       <div className="relative w-full max-w-md lg:max-w-4xl bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-slate-100 overflow-hidden my-auto animate-in fade-in-50 zoom-in-95 duration-200">
         {/* Close Button */}
         <button
+          type="button"
           onClick={onClose}
-          className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 z-20 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors"
+          className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 z-20 p-2 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
           aria-label="Close modal"
         >
           <X className="w-5 h-5" />
@@ -776,9 +793,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <p className="text-xs font-bold text-emerald-800 mt-0.5">{activeEmail}</p>
                 </div>
 
-                {import.meta.env.DEV && otpHint && (
+                {otpHint && (
                   <div className="p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl text-xs text-emerald-800 font-semibold">
-                    🔑 Development OTP Code: <span className="font-mono text-sm tracking-widest">{otpHint}</span>
+                    🔑 Verification Code Preview: <span className="font-mono text-sm tracking-widest">{otpHint}</span>
                   </div>
                 )}
 
@@ -788,7 +805,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       <span>⚠️</span> Email Delivery Warning
                     </div>
                     <div className="text-[11px] leading-relaxed text-amber-800">
-                      Could not reach your email inbox ({emailNotice.error}). In development, configure <strong>GMAIL_USER</strong> &amp; <strong>GMAIL_APP_PASSWORD</strong> or <strong>RESEND_API_KEY</strong> in <code>.env</code>. You can click <strong>Resend Code</strong> to retry.
+                      Could not reach your email inbox ({emailNotice.error}). Configure <strong>GMAIL_USER</strong> &amp; <strong>GMAIL_APP_PASSWORD</strong>, <strong>BREVO_API_KEY</strong>, or <strong>RESEND_API_KEY</strong> in your environment variables, then click <strong>Resend Code</strong> to retry.
                     </div>
                   </div>
                 )}
@@ -851,6 +868,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                         setMode('register');
                         setOtp(['', '', '', '', '', '']);
                         setOtpHint(null);
+                        setEmailNotice(null);
                       }}
                       className="text-slate-500 hover:text-slate-700 underline cursor-pointer"
                     >

@@ -6,7 +6,6 @@ import {
   validateImageFile,
   validateImageSlots,
   MAX_IMAGE_COUNT,
-  MAX_IMAGE_SIZE_BYTES,
 } from './validation';
 import { db } from '../../server/db/store';
 import { uploadImage } from '../../server/controllers/uploadController';

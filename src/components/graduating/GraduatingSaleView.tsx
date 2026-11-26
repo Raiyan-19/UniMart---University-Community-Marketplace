@@ -1,13 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
   GraduationCap,
-  Sparkles,
-  Package,
-  ArrowRight,
   Plus,
   X,
   Loader2,
-  CheckCircle2,
   CheckSquare,
   Square,
   Pencil,

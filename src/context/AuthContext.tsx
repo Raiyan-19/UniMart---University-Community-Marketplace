@@ -10,10 +10,11 @@ interface AuthContextType {
   isAuthenticated: boolean;
   requiresEmailVerification: boolean;
   unverifiedUser: User | null;
-  login: (credentials: LoginCredentials) => Promise<boolean>;
+  login: (credentials: LoginCredentials) => Promise<{ success: boolean; requiresEmailVerification?: boolean }>;
   register: (payload: RegisterPayload) => Promise<{ success: boolean; emailSent?: boolean; emailDeliveryError?: string; otpPreview?: string }>;
   verifyEmail: (code: string, emailOverride?: string) => Promise<boolean>;
   resendVerificationCode: () => Promise<string | undefined>;
+  dismissEmailVerification: () => void;
   logout: () => Promise<void>;
   updateUser: (updated: User) => void;
   switchDemoRole: (role: 'student' | 'teacher' | 'admin') => Promise<void>;
@@ -109,7 +110,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => window.removeEventListener('unimart:unauthorized', handleUnauthorized);
   }, []);
 
-  const login = async (credentials: LoginCredentials): Promise<boolean> => {
+  const login = async (credentials: LoginCredentials): Promise<{ success: boolean; requiresEmailVerification?: boolean }> => {
     try {
       setIsLoading(true);
       const res = await authApi.login(credentials);
@@ -122,17 +123,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setRequiresEmailVerification(true);
           setUnverifiedUser(res.user);
           info('Verification Required', 'Please enter the 6-digit code sent to your university email.');
+          return { success: true, requiresEmailVerification: true };
         } else {
           setRequiresEmailVerification(false);
           setUnverifiedUser(null);
           success('Welcome Back!', `Logged in as ${res.user.name} (${res.user.role.toUpperCase()})`);
+          return { success: true, requiresEmailVerification: false };
         }
-        return true;
       }
-      return false;
+      return { success: false };
     } catch (err: any) {
       error('Login Failed', err.message || 'Invalid email or password.');
-      return false;
+      return { success: false };
     } finally {
       setIsLoading(false);
     }
@@ -215,6 +217,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return undefined;
   };
 
+  const dismissEmailVerification = () => {
+    clearStoredAuth();
+    setUser(null);
+    setToken(null);
+    setRequiresEmailVerification(false);
+    setUnverifiedUser(null);
+  };
+
   const logout = async () => {
     try {
       await authApi.logout();
@@ -257,6 +267,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         register,
         verifyEmail,
         resendVerificationCode,
+        dismissEmailVerification,
         logout,
         updateUser,
         switchDemoRole,

@@ -20,7 +20,7 @@ import { MessagesChatView } from './components/chat/MessagesChatView';
 import { ServicesView } from './components/services/ServicesView';
 import { GraduatingSaleView } from './components/graduating/GraduatingSaleView';
 import { HelpSupportView } from './components/support/HelpSupportView';
-import { GuidesView } from './components/views/Placeholders';
+import { GuidesView } from './components/guides/GuidesView';
 import { ProductDetailsModal } from './components/marketplace/ProductDetailsModal';
 import { MakeOfferModal } from './components/marketplace/MakeOfferModal';
 import { CreateListingModal } from './components/marketplace/CreateListingModal';
@@ -33,7 +33,7 @@ import { productsApi, notificationApi } from './services/api';
 import { parseCurrentRoute, buildRouteUrl, isProtectedRoute } from './utils/routing';
 
 function MainLayout() {
-  const { user, requiresEmailVerification, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { user, requiresEmailVerification, dismissEmailVerification, isAuthenticated, isLoading: isAuthLoading } = useAuth();
   const { showToast } = useToast();
 
   const initialRoute = parseCurrentRoute();
@@ -237,7 +237,7 @@ function MainLayout() {
     setIsCreateListingOpen(true);
   };
 
-  const handleStartChatWithSeller = (product: Product) => {
+  const handleStartChatWithSeller = (_product: Product) => {
     if (!isAuthenticated) {
       handleOpenAuth('login');
       return;
@@ -269,7 +269,7 @@ function MainLayout() {
     }
   };
 
-  const handleContactServiceProvider = (providerName: string, serviceTitle: string) => {
+  const handleContactServiceProvider = (providerName: string, _serviceTitle: string) => {
     if (!isAuthenticated) {
       handleOpenAuth('login');
       return;
@@ -476,6 +476,9 @@ function MainLayout() {
         isOpen={isAuthModalOpen || requiresEmailVerification}
         initialMode={requiresEmailVerification ? 'verify' : authModalMode}
         onClose={() => {
+          if (requiresEmailVerification) {
+            dismissEmailVerification();
+          }
           setIsAuthModalOpen(false);
           handleNavigate('home');
         }}

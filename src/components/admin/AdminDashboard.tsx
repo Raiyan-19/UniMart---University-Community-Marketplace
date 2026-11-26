@@ -4,46 +4,31 @@ import {
   Building2,
   BookOpen,
   CheckCircle2,
-  XCircle,
   Search,
   Plus,
   Edit2,
   Trash2,
-  Shield,
   ShieldCheck,
   ShieldAlert,
-  Activity,
   Award,
   Flag,
   Tag,
   HelpCircle,
   RefreshCw,
-  Filter,
   X,
-  ChevronDown,
   MapPin,
   Mail,
-  FileText,
-  AlertCircle,
   Eye,
   Clock,
   Sparkles,
   ShoppingBag,
   Handshake,
-  Check,
   Download,
   History,
   BarChart3,
   SlidersHorizontal,
   Package,
-  Layers,
   Phone,
-  Calendar,
-  AlertTriangle,
-  UserCheck,
-  UserX,
-  Ban,
-  ArrowUpRight,
   ExternalLink,
 } from 'lucide-react';
 import {
@@ -56,7 +41,7 @@ import {
   Product,
   AuditLogItem,
 } from '../../types';
-import { adminApi, universityApi, reportsApi, guidesApi, productsApi } from '../../services/api';
+import { adminApi, universityApi, reportsApi, guidesApi } from '../../services/api';
 import { useToast } from '../../context/ToastContext';
 import { useUniversity } from '../../context/UniversityContext';
 import { useAuth } from '../../context/AuthContext';
@@ -121,7 +106,7 @@ export const AdminDashboard: React.FC = () => {
   const [listingSearch, setListingSearch] = useState('');
   const [listingStatusFilter, setListingStatusFilter] = useState<string>('all');
   const [listingUnivFilter, setListingUnivFilter] = useState<string>('all');
-  const [listingCategoryFilter, setListingCategoryFilter] = useState<string>('all');
+  const listingCategoryFilter: string = 'all';
   const [selectedListingForPreview, setSelectedListingForPreview] = useState<Product | null>(null);
 
   // University Modal State
@@ -145,7 +130,7 @@ export const AdminDashboard: React.FC = () => {
 
   // Moderation / Reports State
   const [reportStatusFilter, setReportStatusFilter] = useState<'ALL' | 'PENDING' | 'RESOLVED' | 'DISMISSED'>('ALL');
-  const [reportTypeFilter, setReportTypeFilter] = useState<'ALL' | 'listing' | 'user' | 'service' | 'system'>('ALL');
+  const reportTypeFilter: 'ALL' | 'listing' | 'user' | 'service' | 'system' = 'ALL';
   const [selectedReport, setSelectedReport] = useState<ReportItem | null>(null);
   const [resolutionNotes, setResolutionNotes] = useState('');
   const [isResolvingReport, setIsResolvingReport] = useState(false);

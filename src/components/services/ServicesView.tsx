@@ -36,7 +36,7 @@ const getCategoryIcon = (name: string) => {
 
 export const ServicesView: React.FC<ServicesViewProps> = ({ onContactProvider, onOpenAuthModal }) => {
   const { showToast } = useToast();
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { selectedUniversity } = useUniversity();
   const [services, setServices] = useState<CampusService[]>([]);
   const [categories, setCategories] = useState<string[]>([

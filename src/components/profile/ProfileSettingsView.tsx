@@ -9,9 +9,6 @@ import {
   GraduationCap,
   Save,
   Lock,
-  Mail,
-  Phone,
-  Building2,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useUniversity } from '../../context/UniversityContext';

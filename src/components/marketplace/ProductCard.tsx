@@ -21,9 +21,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onStatusChange,
   onDelete,
 }) => {
-  const isSold = product.status === 'sold';
-  const isInactive = product.status === 'inactive';
-
   return (
     <div
       onClick={() => onSelect(product)}
