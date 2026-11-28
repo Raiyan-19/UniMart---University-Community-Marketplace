@@ -131,13 +131,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       setIsLoading(true);
       const res = await authApi.register(payload);
-      if (res.success && res.user && res.token) {
-        setUser(res.user);
-        setToken(res.token);
-        setStoredToken(res.token, res.user.id);
+      if (res.success && res.user) {
         setRequiresEmailVerification(false);
         setUnverifiedUser(null);
-        success('Account Created!', `Welcome to UniMart, ${res.user.name}!`);
+        success('Account Created!', 'Your account is ready. Please log in with your email and password.');
 
         return {
           success: true,

@@ -3,9 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { ToastProvider, useToast } from './context/ToastContext';
-import { UniversityProvider } from './context/UniversityContext';
+import { UniversityProvider, useUniversity } from './context/UniversityContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { Header } from './components/layout/Header';
 import { Sidebar } from './components/layout/Sidebar';
@@ -34,7 +34,23 @@ import { parseCurrentRoute, buildRouteUrl, isProtectedRoute } from './utils/rout
 
 function MainLayout() {
   const { user, requiresEmailVerification, dismissEmailVerification, isAuthenticated, isLoading: isAuthLoading } = useAuth();
+  const { setSelectedUniversityId } = useUniversity();
   const { showToast } = useToast();
+  const lastSyncedUserIdRef = useRef<string | null>(null);
+
+  // Sync active campus interface to the logged-in user's university on sign-in or session restore
+  useEffect(() => {
+    if (!user) {
+      lastSyncedUserIdRef.current = null;
+      return;
+    }
+    if (user.id !== lastSyncedUserIdRef.current) {
+      lastSyncedUserIdRef.current = user.id;
+      if (user.universityId) {
+        setSelectedUniversityId(user.universityId);
+      }
+    }
+  }, [user, setSelectedUniversityId]);
 
   const initialRoute = parseCurrentRoute();
   const [currentView, setCurrentView] = useState<string>(initialRoute.view);

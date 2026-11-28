@@ -15,10 +15,18 @@ interface UniversityContextType {
 
 const UniversityContext = createContext<UniversityContextType | undefined>(undefined);
 
+function getInitialUniversityId(): string {
+  try {
+    return localStorage.getItem('unimart_selected_univ') || 'univ-baust';
+  } catch {
+    return 'univ-baust';
+  }
+}
+
 export const UniversityProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [universities, setUniversities] = useState<University[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
-  const [selectedUniversityId, setSelectedUniversityIdState] = useState<string>('univ-baust');
+  const [selectedUniversityId, setSelectedUniversityIdState] = useState<string>(getInitialUniversityId);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   const loadData = useCallback(async () => {
@@ -46,10 +54,14 @@ export const UniversityProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     loadData();
   }, [loadData]);
 
-  const setSelectedUniversityId = (id: string) => {
+  const setSelectedUniversityId = useCallback((id: string) => {
     setSelectedUniversityIdState(id);
-    localStorage.setItem('unimart_selected_univ', id);
-  };
+    try {
+      localStorage.setItem('unimart_selected_univ', id);
+    } catch {
+      // Ignore storage write errors
+    }
+  }, []);
 
   const selectedUniversity =
     universities.find((u) => u.id === selectedUniversityId) || universities[0] || null;

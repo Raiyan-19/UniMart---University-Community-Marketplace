@@ -188,7 +188,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       setOtpHint(null);
       setEmailNotice(null);
       setOtp(['', '', '', '', '', '']);
-      onClose();
+      setLoginEmail(payload.email);
+      setLoginPassword('');
+      setRegPassword('');
+      setConfirmPassword('');
+      setMode('login');
     }
   };
 
