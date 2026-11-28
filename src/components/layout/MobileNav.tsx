@@ -25,6 +25,7 @@ interface MobileNavProps {
   onNavigate: (view: string) => void;
   onOpenAuth?: (mode: 'login' | 'register') => void;
   onOpenCreateListing?: () => void;
+  unreadMessagesCount?: number;
 }
 
 const MENU_VIEWS = new Set([
@@ -44,6 +45,7 @@ export const MobileNav: React.FC<MobileNavProps> = ({
   onNavigate,
   onOpenAuth,
   onOpenCreateListing,
+  unreadMessagesCount = 0,
 }) => {
   const { user, isAuthenticated, logout } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -364,7 +366,17 @@ export const MobileNav: React.FC<MobileNavProps> = ({
             currentView === 'messages' && !isMenuOpen ? 'text-emerald-700 font-bold' : 'text-slate-500 hover:text-slate-900'
           }`}
         >
-          <MessageSquare className="w-5 h-5 mb-0.5" />
+          <div className="relative">
+            <MessageSquare className="w-5 h-5 mb-0.5" />
+            {unreadMessagesCount > 0 && (
+              <span
+                className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 bg-rose-500 text-white text-[9px] font-extrabold rounded-full flex items-center justify-center ring-2 ring-white leading-none"
+                aria-label={`${unreadMessagesCount} unread messages`}
+              >
+                {unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}
+              </span>
+            )}
+          </div>
           <span>Messages</span>
         </button>
 

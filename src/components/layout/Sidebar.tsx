@@ -17,9 +17,14 @@ import { useAuth } from '../../context/AuthContext';
 interface SidebarProps {
   currentView: string;
   onNavigate: (view: string) => void;
+  unreadMessagesCount?: number;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  currentView,
+  onNavigate,
+  unreadMessagesCount = 0,
+}) => {
   const { user, isAuthenticated } = useAuth();
   const isAdmin = user?.role === 'admin';
 
@@ -58,11 +63,20 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onNavigate }) => 
                 }`}
               >
                 <Icon
-                  className={`w-4 h-4 ${
+                  className={`w-4 h-4 shrink-0 ${
                     isActive ? 'text-emerald-700' : 'text-slate-400 group-hover:text-slate-600'
                   }`}
                 />
-                <span>{item.label}</span>
+                <span className="flex-1 text-left">{item.label}</span>
+                {item.id === 'messages' && unreadMessagesCount > 0 && (
+                  <span
+                    className="ml-auto inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-rose-500 text-white text-[10px] font-bold leading-none shadow-2xs"
+                    aria-label={`${unreadMessagesCount} unread messages`}
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                    <span>{unreadMessagesCount > 99 ? '99+' : unreadMessagesCount}</span>
+                  </span>
+                )}
               </button>
             );
           })}

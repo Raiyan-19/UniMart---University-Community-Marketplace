@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { ToastProvider, useToast } from './context/ToastContext';
 import { UniversityProvider, useUniversity } from './context/UniversityContext';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -29,7 +29,7 @@ import { AuthModal, AuthMode } from './components/auth/AuthModal';
 import { NotificationDrawer } from './components/notifications/NotificationDrawer';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { Product } from './types';
-import { productsApi, notificationApi } from './services/api';
+import { productsApi, notificationApi, chatApi } from './services/api';
 import { parseCurrentRoute, buildRouteUrl, isProtectedRoute } from './utils/routing';
 
 function MainLayout() {
@@ -59,24 +59,50 @@ function MainLayout() {
   const [authModalMode, setAuthModalMode] = useState<AuthMode>('login');
   const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
   const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [unreadMessagesCount, setUnreadMessagesCount] = useState<number>(0);
 
-  // Sync initial unread notifications count from backend
-  useEffect(() => {
-    if (isAuthenticated) {
-      notificationApi
-        .getAll()
-        .then((res) => {
-          if (res.success && res.data) {
-            const count = res.data.filter((n) => !n.isRead).length;
-            setUnreadCount(count);
-          }
-        })
-        .catch(() => {});
-    } else {
-      setUnreadCount(0);
-      setIsNotificationsOpen(false);
+  // Sync unread notifications and chat messages count from backend
+  const syncUnreadCounts = useCallback(async () => {
+    if (!isAuthenticated) return;
+    try {
+      const [notifRes, chatRes] = await Promise.all([
+        notificationApi.getAll().catch(() => null),
+        chatApi.getConversations().catch(() => null),
+      ]);
+      if (notifRes?.success && notifRes.data) {
+        setUnreadCount(notifRes.data.filter((n) => !n.isRead).length);
+      }
+      if (chatRes?.success && chatRes.data) {
+        const totalUnread = chatRes.data.reduce((sum, conv) => sum + (conv.unreadCount || 0), 0);
+        setUnreadMessagesCount(totalUnread);
+      }
+    } catch {
+      // Ignore background polling errors
     }
-  }, [isAuthenticated, user?.id]);
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setUnreadCount(0);
+      setUnreadMessagesCount(0);
+      setIsNotificationsOpen(false);
+      return;
+    }
+
+    syncUnreadCounts();
+    const interval = setInterval(syncUnreadCounts, 10000);
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        syncUnreadCounts();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [isAuthenticated, user?.id, syncUnreadCounts]);
 
   // Marketplace Interactive State
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -312,7 +338,11 @@ function MainLayout() {
 
       <div className="flex-1 flex max-w-7xl w-full mx-auto min-w-0 lg:overflow-hidden">
         {/* Left Sidebar */}
-        <Sidebar currentView={currentView} onNavigate={handleNavigate} />
+        <Sidebar
+          currentView={currentView}
+          onNavigate={handleNavigate}
+          unreadMessagesCount={unreadMessagesCount}
+        />
 
         {/* Main Content View */}
         <main ref={mainContentRef} className="flex-1 lg:h-full lg:overflow-y-auto p-3 sm:p-5 lg:p-8 min-w-0 pb-24 lg:pb-8 overscroll-contain">
@@ -357,6 +387,7 @@ function MainLayout() {
                   });
                 }}
                 onOpenMakeOffer={(p) => setProductForOffer(p)}
+                onUnreadMessagesChange={setUnreadMessagesCount}
               />
             </ProtectedRoute>
           )}
@@ -429,6 +460,7 @@ function MainLayout() {
         onNavigate={handleNavigate}
         onOpenAuth={handleOpenAuth}
         onOpenCreateListing={handleOpenCreateListing}
+        unreadMessagesCount={unreadMessagesCount}
       />
 
       {/* Product Details Modal */}

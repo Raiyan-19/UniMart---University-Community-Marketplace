@@ -6,6 +6,8 @@ import {
   ShieldCheck,
   ShoppingBag,
   ArrowLeft,
+  Check,
+  CheckCheck,
 } from 'lucide-react';
 import { Conversation, ChatMessage, Product } from '../../types';
 import { chatApi, offersApi, productsApi } from '../../services/api';
@@ -16,11 +18,13 @@ interface MessagesChatViewProps {
   initialProductId?: string;
   onViewProduct?: (productId: string) => void;
   onOpenMakeOffer?: (product: Product) => void;
+  onUnreadMessagesChange?: (count: number) => void;
 }
 
 export const MessagesChatView: React.FC<MessagesChatViewProps> = ({
   onViewProduct,
   onOpenMakeOffer,
+  onUnreadMessagesChange,
 }) => {
   const { user } = useAuth();
   const { showToast } = useToast();
@@ -62,8 +66,10 @@ export const MessagesChatView: React.FC<MessagesChatViewProps> = ({
       const res = await chatApi.getConversations();
       if (res.data) {
         setConversations(res.data);
-        if (res.data.length > 0 && !activeConversationId) {
-          setActiveConversationId(res.data[0].id);
+        const totalUnread = res.data.reduce((sum, conv) => sum + (conv.unreadCount || 0), 0);
+        onUnreadMessagesChange?.(totalUnread);
+        if (res.data.length > 0) {
+          setActiveConversationId((prev) => prev || res.data![0].id);
         }
       }
     } catch (err: any) {
@@ -81,6 +87,8 @@ export const MessagesChatView: React.FC<MessagesChatViewProps> = ({
       return;
     }
     fetchConversations();
+    const convInterval = setInterval(fetchConversations, 5000);
+    return () => clearInterval(convInterval);
   }, [user?.id]);
 
   // Fetch messages when active conversation changes
@@ -93,20 +101,36 @@ export const MessagesChatView: React.FC<MessagesChatViewProps> = ({
       try {
         const res = await chatApi.getMessages(activeConversationId);
         if (res.data) {
+          setConversations((prevConvs) => {
+            const target = prevConvs.find((c) => c.id === activeConversationId);
+            if (!target || !target.unreadCount) return prevConvs;
+            const nextConvs = prevConvs.map((c) =>
+              c.id === activeConversationId ? { ...c, unreadCount: 0 } : c
+            );
+            const totalUnread = nextConvs.reduce((sum, conv) => sum + (conv.unreadCount || 0), 0);
+            onUnreadMessagesChange?.(totalUnread);
+            return nextConvs;
+          });
+
           setMessages((prev) => {
-            const hasChanged =
+            const listChanged =
               prev.length !== res.data!.length ||
               (res.data!.length > 0 && prev[prev.length - 1]?.id !== res.data![res.data!.length - 1]?.id);
+            const readChanged =
+              !listChanged &&
+              prev.some((m, idx) => Boolean(m.isRead) !== Boolean(res.data![idx]?.isRead));
 
-            if (!hasChanged) return prev;
+            if (!listChanged && !readChanged) return prev;
 
-            if (isFirstLoad) {
-              setTimeout(() => {
-                scrollToBottom('auto');
-                isAtBottomRef.current = true;
-              }, 40);
-            } else if (isAtBottomRef.current) {
-              setTimeout(() => scrollToBottom('smooth'), 40);
+            if (listChanged) {
+              if (isFirstLoad) {
+                setTimeout(() => {
+                  scrollToBottom('auto');
+                  isAtBottomRef.current = true;
+                }, 40);
+              } else if (isAtBottomRef.current) {
+                setTimeout(() => scrollToBottom('smooth'), 40);
+              }
             }
 
             return res.data!;
@@ -122,7 +146,7 @@ export const MessagesChatView: React.FC<MessagesChatViewProps> = ({
     };
 
     fetchMessages();
-    const interval = setInterval(fetchMessages, 3500); // Poll for real-time messages
+    const interval = setInterval(fetchMessages, 3500); // Poll for real-time messages & read receipts
     return () => clearInterval(interval);
   }, [activeConversationId]);
 
@@ -413,74 +437,111 @@ export const MessagesChatView: React.FC<MessagesChatViewProps> = ({
                   </span>
                 </div>
 
-                {messages.map((msg) => {
-                  const isMine = msg.senderId === user?.id;
+                {(() => {
+                  const lastOutgoingMsgId = [...messages].reverse().find((m) => m.senderId === user?.id)?.id;
+                  return messages.map((msg) => {
+                    const isMine = msg.senderId === user?.id;
+                    const showReadReceipt = isMine && msg.id === lastOutgoingMsgId;
 
-                  if (msg.isOffer) {
+                    if (msg.isOffer) {
+                      return (
+                        <div
+                          key={msg.id}
+                          className={`flex ${isMine ? 'justify-end' : 'justify-start'} my-2`}
+                        >
+                          <div className="max-w-sm w-full bg-white border-2 border-emerald-500 rounded-2xl p-4 shadow-sm space-y-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-bold text-emerald-800 flex items-center gap-1.5">
+                                <BadgeDollarSign className="w-4 h-4 text-emerald-600" />
+                                Official Campus Offer
+                              </span>
+                              <span className="text-[10px] text-gray-400">
+                                {new Date(msg.createdAt).toLocaleTimeString([], {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </span>
+                            </div>
+
+                            <div className="text-xl font-extrabold text-gray-900">
+                              ৳ {msg.offerAmount?.toLocaleString()}
+                            </div>
+
+                            <p className="text-xs text-gray-600">{msg.text}</p>
+
+                            {/* If receiver is current user (seller) and product is not yet sold, allow accept */}
+                            {!isMine && activeProduct?.sellerId === user?.id && activeProduct?.status === 'active' && (
+                              <div className="pt-2 flex items-center gap-2">
+                                <button
+                                  type="button"
+                                  onClick={() => handleAcceptOffer(msg.offerAmount)}
+                                  className="flex-1 py-1.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold transition"
+                                >
+                                  Accept Offer
+                                </button>
+                              </div>
+                            )}
+
+                            {showReadReceipt && (
+                              <div className="flex justify-end pt-0.5">
+                                {msg.isRead ? (
+                                  <span className="inline-flex items-center gap-0.5 text-[10px] text-emerald-700 font-semibold">
+                                    <CheckCheck className="w-3 h-3" />
+                                    <span>Seen</span>
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center gap-0.5 text-[10px] text-gray-400">
+                                    <Check className="w-3 h-3" />
+                                    <span>Sent</span>
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+
                     return (
                       <div
                         key={msg.id}
-                        className={`flex ${isMine ? 'justify-end' : 'justify-start'} my-2`}
+                        className={`flex flex-col ${isMine ? 'items-end' : 'items-start'}`}
                       >
-                        <div className="max-w-sm w-full bg-white border-2 border-emerald-500 rounded-2xl p-4 shadow-sm space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-bold text-emerald-800 flex items-center gap-1.5">
-                              <BadgeDollarSign className="w-4 h-4 text-emerald-600" />
-                              Official Campus Offer
-                            </span>
-                            <span className="text-[10px] text-gray-400">
-                              {new Date(msg.createdAt).toLocaleTimeString([], {
-                                hour: '2-digit',
-                                minute: '2-digit',
-                              })}
-                            </span>
-                          </div>
-
-                          <div className="text-xl font-extrabold text-gray-900">
-                            ৳ {msg.offerAmount?.toLocaleString()}
-                          </div>
-
-                          <p className="text-xs text-gray-600">{msg.text}</p>
-
-                          {/* If receiver is current user (seller) and product is not yet sold, allow accept */}
-                          {!isMine && activeProduct?.sellerId === user?.id && activeProduct?.status === 'active' && (
-                            <div className="pt-2 flex items-center gap-2">
-                              <button
-                                type="button"
-                                onClick={() => handleAcceptOffer(msg.offerAmount)}
-                                className="flex-1 py-1.5 px-3 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-semibold transition"
-                              >
-                                Accept Offer
-                              </button>
-                            </div>
+                        <div
+                          className={`max-w-[78%] px-4 py-2.5 rounded-2xl text-xs sm:text-sm ${isMine
+                              ? 'bg-emerald-800 text-white rounded-tr-xs'
+                              : 'bg-white text-gray-800 border border-gray-200 rounded-tl-xs shadow-2xs'
+                            }`}
+                        >
+                          {msg.text}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[10px] text-gray-400 mt-1 px-1">
+                          <span>
+                            {new Date(msg.createdAt).toLocaleTimeString([], {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </span>
+                          {showReadReceipt && (
+                            msg.isRead ? (
+                              <span className="inline-flex items-center gap-0.5 text-emerald-700 font-semibold">
+                                <span>·</span>
+                                <CheckCheck className="w-3 h-3" />
+                                <span>Seen</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-0.5 text-gray-400">
+                                <span>·</span>
+                                <Check className="w-3 h-3" />
+                                <span>Sent</span>
+                              </span>
+                            )
                           )}
                         </div>
                       </div>
                     );
-                  }
-
-                  return (
-                    <div
-                      key={msg.id}
-                      className={`flex flex-col ${isMine ? 'items-end' : 'items-start'}`}
-                    >
-                      <div
-                        className={`max-w-[78%] px-4 py-2.5 rounded-2xl text-xs sm:text-sm ${isMine
-                            ? 'bg-emerald-800 text-white rounded-tr-xs'
-                            : 'bg-white text-gray-800 border border-gray-200 rounded-tl-xs shadow-2xs'
-                          }`}
-                      >
-                        {msg.text}
-                      </div>
-                      <span className="text-[10px] text-gray-400 mt-1 px-1">
-                        {new Date(msg.createdAt).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </span>
-                    </div>
-                  );
-                })}
+                  });
+                })()}
                 <div ref={messagesEndRef} />
               </div>
 
