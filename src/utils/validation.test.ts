@@ -12,7 +12,10 @@ test('email validation correctly accepts valid format', () => {
 
 test('university domain check identifies institutional emails', () => {
   assert.equal(isUniversityEmail('raiyan@baust.edu.bd', 'baust.edu.bd'), true);
+  assert.equal(isUniversityEmail('raiyan19@student.baust.edu.bd', 'baust.edu.bd'), true);
   assert.equal(isUniversityEmail('student@du.ac.bd', 'baust.edu.bd'), false);
+  assert.equal(isUniversityEmail('fake@notbaust.edu.bd', 'baust.edu.bd'), false);
+  assert.equal(isUniversityEmail('student@gmail.com', 'baust.edu.bd'), false);
   assert.equal(isUniversityEmail('student@du.ac.bd', 'du.ac.bd'), true);
 });
 
@@ -44,6 +47,50 @@ test('registration payload validation checks student specific fields', () => {
     studentId: '20221015',
   });
   assert.equal(validStudent.isValid, true);
+
+  const personalEmailStudent = validateRegistration(
+    {
+      name: 'Sultan Raiyan',
+      email: 'raiyan@gmail.com',
+      password: 'password123',
+      role: 'student',
+      universityId: 'univ-baust',
+      departmentId: 'dept-cse',
+      studentId: '20221015',
+    },
+    'baust.edu.bd'
+  );
+  assert.equal(personalEmailStudent.isValid, false);
+  assert.ok(personalEmailStudent.errors.email);
+
+  const wrongUnivTeacher = validateRegistration(
+    {
+      name: 'Dr. Aminul Islam',
+      email: 'aminul@du.ac.bd',
+      password: 'password123',
+      role: 'teacher',
+      universityId: 'univ-baust',
+      departmentId: 'dept-cse',
+      designation: 'Professor',
+    },
+    'baust.edu.bd'
+  );
+  assert.equal(wrongUnivTeacher.isValid, false);
+  assert.ok(wrongUnivTeacher.errors.email);
+
+  const validTeacher = validateRegistration(
+    {
+      name: 'Dr. Aminul Islam',
+      email: 'aminul@baust.edu.bd',
+      password: 'password123',
+      role: 'teacher',
+      universityId: 'univ-baust',
+      departmentId: 'dept-cse',
+      designation: 'Professor',
+    },
+    'baust.edu.bd'
+  );
+  assert.equal(validTeacher.isValid, true);
 });
 
 test('RBAC permissions allow admin privileges and restrict students', () => {

@@ -15,16 +15,17 @@ export function isValidEmail(email: string): boolean {
 export function isUniversityEmail(email: string, domain?: string): boolean {
   if (!isValidEmail(email)) return false;
   const cleanEmail = email.trim().toLowerCase();
+  const emailDomain = cleanEmail.split('@')[1] || '';
   if (domain) {
     const cleanDomain = domain.trim().toLowerCase();
-    return cleanEmail.endsWith(`@${cleanDomain}`) || cleanEmail.endsWith(`.${cleanDomain}`);
+    return emailDomain === cleanDomain || emailDomain.endsWith(`.${cleanDomain}`);
   }
   // Generic university check
   return (
-    cleanEmail.includes('.edu') ||
-    cleanEmail.includes('.ac.') ||
-    cleanEmail.endsWith('.bd') ||
-    cleanEmail.includes('student.')
+    emailDomain.includes('.edu') ||
+    emailDomain.includes('.ac.') ||
+    emailDomain.endsWith('.bd') ||
+    emailDomain.startsWith('student.')
   );
 }
 
@@ -35,7 +36,10 @@ export function validatePassword(password: string): { isValid: boolean; message?
   return { isValid: true };
 }
 
-export function validateRegistration(payload: Partial<RegisterPayload>): ValidationResult {
+export function validateRegistration(
+  payload: Partial<RegisterPayload>,
+  universityDomain?: string
+): ValidationResult {
   const errors: Record<string, string> = {};
 
   if (!payload.name || payload.name.trim().length < 2) {
@@ -44,6 +48,8 @@ export function validateRegistration(payload: Partial<RegisterPayload>): Validat
 
   if (!payload.email || !isValidEmail(payload.email)) {
     errors.email = 'A valid university email address is required';
+  } else if (universityDomain && !isUniversityEmail(payload.email, universityDomain)) {
+    errors.email = `Please use your official university email (@${universityDomain})`;
   }
 
   const passCheck = validatePassword(payload.password || '');

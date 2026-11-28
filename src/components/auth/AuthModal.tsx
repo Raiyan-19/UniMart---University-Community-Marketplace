@@ -21,7 +21,7 @@ import {
 import { useAuth } from '../../context/AuthContext';
 import { useUniversity } from '../../context/UniversityContext';
 import { useToast } from '../../context/ToastContext';
-import { validateRegistration } from '../../utils/validation';
+import { validateRegistration, isUniversityEmail } from '../../utils/validation';
 
 export type AuthMode = 'login' | 'register' | 'verify' | 'verified_success' | 'forgot_password';
 
@@ -71,6 +71,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   // Forgot password state
   const [forgotEmail, setForgotEmail] = useState('');
+
+  const selectedUniv = universities.find((u) => u.id === selectedUnivId);
 
   useEffect(() => {
     if (isOpen && !requiresEmailVerification && initialMode) {
@@ -171,7 +173,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       designation: role === 'teacher' ? designation.trim() : undefined,
     };
 
-    const validation = validateRegistration(payload);
+    const validation = validateRegistration(payload, selectedUniv?.domain);
     if (!validation.isValid) {
       const firstMsg = Object.values(validation.errors)[0] || 'Please check your registration details.';
       error('Invalid Registration Details', firstMsg);
@@ -617,10 +619,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                           required
                           value={regEmail}
                           onChange={(e) => setRegEmail(e.target.value)}
-                          placeholder="yourname@baust.edu.bd"
+                          placeholder={`yourname@${selectedUniv?.domain || 'baust.edu.bd'}`}
                           className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-800 focus:bg-white focus:border-emerald-600 focus:outline-none"
                         />
                       </div>
+                      {selectedUniv && (
+                        <p
+                          className={`text-[10px] mt-1 font-medium ${
+                            regEmail.trim().length > 0 && !isUniversityEmail(regEmail, selectedUniv.domain)
+                              ? 'text-rose-600'
+                              : 'text-slate-400'
+                          }`}
+                        >
+                          {regEmail.trim().length > 0 && !isUniversityEmail(regEmail, selectedUniv.domain)
+                            ? `Must use an official @${selectedUniv.domain} email for ${selectedUniv.shortName}`
+                            : `Official @${selectedUniv.domain} email required`}
+                        </p>
+                      )}
                     </div>
                   </div>
 

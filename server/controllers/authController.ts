@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { db, hashPassword, verifyPassword, generateToken, generateOTP } from '../db/store';
 import { signAuthToken } from '../middleware/authMiddleware';
-import { validateRegistration } from '../../src/utils/validation';
+import { validateRegistration, isUniversityEmail } from '../../src/utils/validation';
 import { IUserDocument } from '../db/schema';
 import { User } from '../../src/types';
 import { sendVerificationEmail, getEmailProviderStatus } from '../services/emailService';
@@ -88,6 +88,14 @@ export async function register(req: Request, res: Response): Promise<void> {
       res.status(400).json({
         success: false,
         error: 'The selected department was not found.',
+      });
+      return;
+    }
+
+    if (!isUniversityEmail(email, univ.domain)) {
+      res.status(400).json({
+        success: false,
+        error: `Registration for ${univ.shortName} requires an official university email ending with @${univ.domain}.`,
       });
       return;
     }
