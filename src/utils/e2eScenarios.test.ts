@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { db } from '../../server/db/store';
-import { register, login, logout, verifyEmail } from '../../server/controllers/authController';
+import { register, login, logout } from '../../server/controllers/authController';
 import { getProducts, getProductById, createProduct, updateProduct } from '../../server/controllers/productController';
 import { getConversationMessages, sendMessage, startConversationForProduct } from '../../server/controllers/chatController';
 import { getNotifications, markAsRead } from '../../server/controllers/notificationController';
@@ -41,22 +41,11 @@ test('Mandatory Scenario 1: User Registration, OTP Dispatch, and Verification Fl
 
   assert.equal(regRes.statusCode, 201);
   assert.equal(regRes.jsonData.success, true);
-  assert.equal(regRes.jsonData.requiresEmailVerification, true);
-  assert.equal(regRes.jsonData.emailSent, true);
+  assert.equal(regRes.jsonData.requiresEmailVerification, false);
 
   const user = (await db.findUserByEmail(email))!;
   assert.ok(user);
-  assert.equal(user.isEmailVerified, false);
-  const otp = user.emailVerificationToken!;
-  assert.ok(otp && otp.length === 6);
-
-  // Complete OTP verification
-  const verifyRes = createMockRes();
-  await verifyEmail({ body: { email, code: otp } } as any, verifyRes as any);
-
-  assert.equal(verifyRes.statusCode, 200);
-  assert.equal(verifyRes.jsonData.success, true);
-  assert.equal(verifyRes.jsonData.user.isEmailVerified, true);
+  assert.equal(user.isEmailVerified, true);
 });
 
 test('Mandatory Scenario 2: Logout and Invalidation of Session / Private Access', async () => {

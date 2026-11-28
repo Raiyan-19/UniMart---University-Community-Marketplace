@@ -183,17 +183,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     setIsSubmitting(false);
 
     if (res.success) {
-      if (res.otpPreview) {
-        setOtpHint(res.otpPreview);
-      } else {
-        setOtpHint(null);
-      }
-      if (res.emailSent !== undefined) {
-        setEmailNotice({ sent: res.emailSent, error: res.emailDeliveryError });
-      }
+      setOtpHint(null);
+      setEmailNotice(null);
       setOtp(['', '', '', '', '', '']);
-      setResendTimer(60);
-      setMode('verify');
+      onClose();
     }
   };
 

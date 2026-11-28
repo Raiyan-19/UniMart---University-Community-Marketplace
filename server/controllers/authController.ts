@@ -93,7 +93,6 @@ export async function register(req: Request, res: Response): Promise<void> {
     }
 
     const { hash, salt } = hashPassword(password);
-    const otp = generateOTP();
     const newUserId = `user-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
     const token = signAuthToken(newUserId, role);
 
@@ -112,9 +111,9 @@ export async function register(req: Request, res: Response): Promise<void> {
       studentId: role === 'student' ? studentId : undefined,
       designation: role === 'teacher' ? designation : undefined,
       currentSemester: currentSemester || (role === 'student' ? '1st Year, 1st Semester' : undefined),
-      isEmailVerified: false,
-      emailVerificationToken: otp,
-      emailVerificationExpires: new Date(Date.now() + 15 * 60 * 1000).toISOString(),
+      isEmailVerified: true,
+      emailVerificationToken: undefined,
+      emailVerificationExpires: undefined,
       isVerified: false,
       status: 'active',
       createdAt: new Date().toISOString(),
@@ -128,49 +127,20 @@ export async function register(req: Request, res: Response): Promise<void> {
       userId: newUserId,
       type: 'system',
       title: 'Welcome to UniMart!',
-      message: `Welcome to the ${univ.shortName} community! Please complete your email verification to enjoy full access.`,
+      message: `Welcome to the ${univ.shortName} community! Start buying, selling, and connecting on campus.`,
       isRead: false,
       createdAt: new Date().toISOString(),
     });
 
-    const emailResult = await sendVerificationEmail({
-      to: createdUser.email,
-      name: createdUser.name,
-      code: otp,
-      universityName: univ.name,
-    });
-
-    const isDev = process.env.NODE_ENV !== 'production';
-    const allowOtpPreview = isDev || process.env.ALLOW_DEMO_OTP_PREVIEW === 'true';
     const formattedUser = await formatUserResponse(createdUser);
-
-    if (!emailResult.success) {
-      console.error(`[Auth] Failed to dispatch verification email to ${createdUser.email}:`, emailResult.error);
-      res.status(201).json({
-        success: true,
-        emailSent: false,
-        emailDeliveryError: emailResult.error,
-        emailDeliveryProvider: emailResult.provider,
-        message: `Account created, but verification email could not be delivered: ${emailResult.error}. Please click Resend Code to try again.`,
-        user: formattedUser,
-        data: { user: formattedUser },
-        token,
-        requiresEmailVerification: true,
-        otpPreview: allowOtpPreview ? otp : undefined,
-      });
-      return;
-    }
 
     res.status(201).json({
       success: true,
-      emailSent: true,
-      emailDeliveryProvider: emailResult.provider,
-      message: `Account registered successfully. A 6-digit verification code has been dispatched to ${createdUser.email}.`,
+      message: 'Account created successfully! Welcome to UniMart.',
       user: formattedUser,
       data: { user: formattedUser },
       token,
-      requiresEmailVerification: true,
-      otpPreview: allowOtpPreview ? otp : undefined,
+      requiresEmailVerification: false,
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -227,7 +197,7 @@ export async function login(req: Request, res: Response): Promise<void> {
       message: 'Logged in successfully.',
       user: formattedUser,
       token,
-      requiresEmailVerification: !user.isEmailVerified,
+      requiresEmailVerification: false,
     });
   } catch (error) {
     console.error('Login error:', error);

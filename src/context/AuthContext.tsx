@@ -28,7 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [requiresEmailVerification, setRequiresEmailVerification] = useState<boolean>(false);
   const [unverifiedUser, setUnverifiedUser] = useState<User | null>(null);
-  const { success, error, info } = useToast();
+  const { success, error } = useToast();
 
   const loadCurrentUser = useCallback(async () => {
     const existingToken = getStoredToken();
@@ -46,13 +46,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.success && currentUser) {
         setUser(currentUser);
         setToken(existingToken);
-        if (!currentUser.isEmailVerified) {
-          setRequiresEmailVerification(true);
-          setUnverifiedUser(currentUser);
-        } else {
-          setRequiresEmailVerification(false);
-          setUnverifiedUser(null);
-        }
+        setRequiresEmailVerification(false);
+        setUnverifiedUser(null);
       } else {
         clearStoredAuth();
         setUser(null);
@@ -118,18 +113,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(res.user);
         setToken(res.token);
         setStoredToken(res.token, res.user.id);
-
-        if (res.requiresEmailVerification) {
-          setRequiresEmailVerification(true);
-          setUnverifiedUser(res.user);
-          info('Verification Required', 'Please enter the 6-digit code sent to your university email.');
-          return { success: true, requiresEmailVerification: true };
-        } else {
-          setRequiresEmailVerification(false);
-          setUnverifiedUser(null);
-          success('Welcome Back!', `Logged in as ${res.user.name} (${res.user.role.toUpperCase()})`);
-          return { success: true, requiresEmailVerification: false };
-        }
+        setRequiresEmailVerification(false);
+        setUnverifiedUser(null);
+        success('Welcome Back!', `Logged in as ${res.user.name} (${res.user.role.toUpperCase()})`);
+        return { success: true, requiresEmailVerification: false };
       }
       return { success: false };
     } catch (err: any) {
@@ -146,22 +133,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const res = await authApi.register(payload);
       if (res.success && res.user && res.token) {
         setUser(res.user);
-        setUnverifiedUser(res.user);
         setToken(res.token);
         setStoredToken(res.token, res.user.id);
-        setRequiresEmailVerification(true);
-
-        if (res.emailSent === false) {
-          info('Email Delivery Notice', res.emailDeliveryError || 'Could not deliver the verification email to your inbox.');
-        } else {
-          success('Account Created', `A 6-digit verification code was sent to ${res.user.email}. Please check your inbox.`);
-        }
+        setRequiresEmailVerification(false);
+        setUnverifiedUser(null);
+        success('Account Created!', `Welcome to UniMart, ${res.user.name}!`);
 
         return {
           success: true,
-          emailSent: res.emailSent,
-          emailDeliveryError: res.emailDeliveryError,
-          otpPreview: res.otpPreview,
         };
       }
       return { success: false };
