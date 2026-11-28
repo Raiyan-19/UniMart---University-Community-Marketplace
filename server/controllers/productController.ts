@@ -430,11 +430,27 @@ export async function toggleWishlist(req: Request, res: Response): Promise<void>
       return;
     }
 
-    const { productId } = req.body;
-    const result = await db.toggleWishlist(req.user._id, productId);
-    res.json({ success: true, ...result });
-  } catch (error) {
-    res.status(500).json({ success: false, error: 'Failed to toggle wishlist.' });
+    const targetProductId = req.body?.productId || req.params.id;
+    if (!targetProductId) {
+      res.status(400).json({ success: false, error: 'Product ID is required.' });
+      return;
+    }
+
+    const result = await db.toggleWishlist(req.user._id, targetProductId);
+    res.json({
+      success: true,
+      isSaved: result.isSaved,
+      count: result.count,
+      saves: result.saves,
+      data: {
+        isSaved: result.isSaved,
+        count: result.count,
+        saves: result.saves,
+      },
+    });
+  } catch (error: any) {
+    const status = error?.message === 'Product not found' ? 404 : 500;
+    res.status(status).json({ success: false, error: error?.message || 'Failed to toggle wishlist.' });
   }
 }
 

@@ -22,13 +22,15 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { Product } from '../../types';
-import { productsApi } from '../../services/api';
+import { productsApi, chatApi } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useUniversity } from '../../context/UniversityContext';
 
 interface HomeDashboardProps {
   onNavigate: (view: string, category?: string) => void;
   onOpenAuth: (mode: 'login' | 'register') => void;
+  onSelectProduct?: (product: Product) => void;
+  onToggleWishlist?: (productId: string) => void;
 }
 
 const CAMPUS_HERO_ASSETS: Record<
@@ -65,7 +67,12 @@ const CAMPUS_HERO_ASSETS: Record<
   },
 };
 
-export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, onOpenAuth }) => {
+export const HomeDashboard: React.FC<HomeDashboardProps> = ({
+  onNavigate,
+  onOpenAuth,
+  onSelectProduct,
+  onToggleWishlist,
+}) => {
   const { user, isAuthenticated } = useAuth();
   const { selectedUniversity } = useUniversity();
 
@@ -82,6 +89,11 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, onOpen
 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dashboardStats, setDashboardStats] = useState({
+    myListings: 0,
+    savedItems: 0,
+    messages: 0,
+  });
 
   const activeCampusHero = (selectedUniversity?.id && CAMPUS_HERO_ASSETS[selectedUniversity.id]) || {
     image: '/assets/campus/baust-campus.jpg',
@@ -103,7 +115,59 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, onOpen
       })
       .catch(() => setProducts([]))
       .finally(() => setLoading(false));
-  }, [selectedUniversity?.id]);
+  }, [selectedUniversity?.id, user?.id]);
+
+  // Fetch live personal dashboard metrics (My Listings, Saved Items, Messages)
+  useEffect(() => {
+    if (!isAuthenticated || !user?.id) {
+      setDashboardStats({ myListings: 0, savedItems: 0, messages: 0 });
+      return;
+    }
+
+    let cancelled = false;
+    Promise.all([
+      productsApi.getMyListings().catch(() => null),
+      productsApi.getWishlist().catch(() => null),
+      chatApi.getConversations().catch(() => null),
+    ]).then(([myRes, wishRes, chatRes]) => {
+      if (cancelled) return;
+      const myCount = myRes?.data?.stats?.total ?? (Array.isArray(myRes?.data) ? myRes.data.length : 0);
+      const savedCount = wishRes?.data ? wishRes.data.length : 0;
+      const msgCount = chatRes?.data ? chatRes.data.length : 0;
+      setDashboardStats({ myListings: myCount, savedItems: savedCount, messages: msgCount });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, user?.id]);
+
+  // Keep featured product hearts and saved count synced when wishlist changes anywhere
+  useEffect(() => {
+    const handleWishlistUpdate = (e: Event) => {
+      const detail = (e as CustomEvent<{ productId: string; isSaved: boolean; saves?: number }>).detail;
+      if (!detail) return;
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === detail.productId
+            ? { ...p, isSaved: detail.isSaved, saves: detail.saves ?? p.saves }
+            : p
+        )
+      );
+      if (isAuthenticated) {
+        productsApi
+          .getWishlist()
+          .then((res) => {
+            if (res.data) {
+              setDashboardStats((prev) => ({ ...prev, savedItems: res.data!.length }));
+            }
+          })
+          .catch(() => {});
+      }
+    };
+    window.addEventListener('unimart:wishlist-updated', handleWishlistUpdate);
+    return () => window.removeEventListener('unimart:wishlist-updated', handleWishlistUpdate);
+  }, [isAuthenticated]);
 
   return (
     <div className="space-y-6 sm:space-y-8 max-w-7xl mx-auto pb-12 w-full">
@@ -296,16 +360,18 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, onOpen
                   className="p-2 sm:p-2.5 bg-slate-50 hover:bg-emerald-50/50 rounded-xl text-center border border-slate-100 hover:border-emerald-200 transition-colors cursor-pointer"
                 >
                   <p className="text-sm sm:text-base font-extrabold text-slate-900">
-                    {user?.id === 'user-raiyan' ? '1' : '0'}
+                    {dashboardStats.myListings}
                   </p>
                   <p className="text-[10px] text-slate-500 font-medium">My Listings</p>
                 </button>
                 <button
                   type="button"
-                  onClick={() => onNavigate('browse')}
+                  onClick={() => onNavigate('saved')}
                   className="p-2 sm:p-2.5 bg-slate-50 hover:bg-emerald-50/50 rounded-xl text-center border border-slate-100 hover:border-emerald-200 transition-colors cursor-pointer"
                 >
-                  <p className="text-sm sm:text-base font-extrabold text-slate-900">0</p>
+                  <p className="text-sm sm:text-base font-extrabold text-slate-900">
+                    {dashboardStats.savedItems}
+                  </p>
                   <p className="text-[10px] text-slate-500 font-medium">Saved Items</p>
                 </button>
                 <button
@@ -313,7 +379,9 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, onOpen
                   onClick={() => onNavigate('messages')}
                   className="p-2 sm:p-2.5 bg-slate-50 hover:bg-emerald-50/50 rounded-xl text-center border border-slate-100 hover:border-emerald-200 transition-colors cursor-pointer"
                 >
-                  <p className="text-sm sm:text-base font-extrabold text-slate-900">3</p>
+                  <p className="text-sm sm:text-base font-extrabold text-slate-900">
+                    {dashboardStats.messages}
+                  </p>
                   <p className="text-[10px] text-slate-500 font-medium">Messages</p>
                 </button>
               </div>
@@ -474,7 +542,7 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, onOpen
             {products.map((prod) => (
               <div
                 key={prod.id}
-                onClick={() => onNavigate('browse')}
+                onClick={() => (onSelectProduct ? onSelectProduct(prod) : onNavigate('browse'))}
                 className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs hover:shadow-md transition-all group flex flex-col justify-between cursor-pointer"
               >
                 <div>
@@ -485,12 +553,19 @@ export const HomeDashboard: React.FC<HomeDashboardProps> = ({ onNavigate, onOpen
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />
                     <button
+                      type="button"
+                      aria-label={prod.isSaved ? 'Remove from wishlist' : 'Save to wishlist'}
                       onClick={(e) => {
                         e.stopPropagation();
+                        if (onToggleWishlist) {
+                          onToggleWishlist(prod.id);
+                        } else if (!isAuthenticated) {
+                          onOpenAuth('login');
+                        }
                       }}
-                      className="absolute top-2 right-2 p-1.5 rounded-full bg-white/80 hover:bg-white text-slate-600 hover:text-rose-600 backdrop-blur-xs shadow-xs transition-colors"
+                      className="absolute top-2 right-2 p-1.5 rounded-full bg-white/90 hover:bg-white text-slate-600 hover:text-rose-600 backdrop-blur-xs shadow-xs transition-colors cursor-pointer"
                     >
-                      <Heart className="w-4 h-4" />
+                      <Heart className={`w-4 h-4 ${prod.isSaved ? 'fill-rose-500 text-rose-500' : ''}`} />
                     </button>
                     <span className="absolute bottom-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-900/80 text-white backdrop-blur-xs">
                       {prod.condition}

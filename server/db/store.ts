@@ -537,43 +537,54 @@ class DatabaseStore {
     return rows.map((r) => r.productId);
   }
 
-  public async toggleWishlist(userId: string, productId: string): Promise<{ isSaved: boolean; count: number }> {
+  public async toggleWishlist(userId: string, productId: string): Promise<{ isSaved: boolean; count: number; saves: number }> {
+    if (!productId) {
+      throw new Error('Product ID is required');
+    }
     return prisma.$transaction(async (tx) => {
       const existing = await tx.wishlist.findUnique({
         where: { userId_productId: { userId, productId } },
       });
       const prod = await tx.product.findUnique({ where: { id: productId } });
+      if (!prod) {
+        throw new Error('Product not found');
+      }
 
       let isSaved = false;
+      let updatedSaves = prod.saves;
       if (existing) {
         await tx.wishlist.delete({ where: { id: existing.id } });
-        if (prod && prod.saves > 0) {
-          await tx.product.update({ where: { id: productId }, data: { saves: { decrement: 1 } } });
-        }
+        const updated = await tx.product.update({
+          where: { id: productId },
+          data: { saves: Math.max(0, prod.saves - 1) },
+        });
+        updatedSaves = updated.saves;
         isSaved = false;
       } else {
         await tx.wishlist.create({ data: { userId, productId } });
-        if (prod) {
-          await tx.product.update({ where: { id: productId }, data: { saves: { increment: 1 } } });
-          if (prod.sellerId !== userId) {
-            await tx.notification.create({
-              data: {
-                id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-                userId: prod.sellerId,
-                type: 'wishlist',
-                title: 'Someone saved your listing!',
-                message: `Your item "${prod.title}" has been saved by another student.`,
-                isRead: false,
-                link: `/product/${prod.id}`,
-              },
-            });
-          }
+        const updated = await tx.product.update({
+          where: { id: productId },
+          data: { saves: { increment: 1 } },
+        });
+        updatedSaves = updated.saves;
+        if (prod.sellerId !== userId) {
+          await tx.notification.create({
+            data: {
+              id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+              userId: prod.sellerId,
+              type: 'wishlist',
+              title: 'Someone saved your listing!',
+              message: `Your item "${prod.title}" has been saved by another student.`,
+              isRead: false,
+              link: `/product/${prod.id}`,
+            },
+          });
         }
         isSaved = true;
       }
 
       const count = await tx.wishlist.count({ where: { userId } });
-      return { isSaved, count };
+      return { isSaved, count, saves: updatedSaves };
     });
   }
 

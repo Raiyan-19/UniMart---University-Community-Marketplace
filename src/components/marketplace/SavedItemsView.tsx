@@ -45,9 +45,18 @@ export const SavedItemsView: React.FC<SavedItemsViewProps> = ({
   const handleToggleWishlist = async (productId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     try {
-      await productsApi.toggleWishlist(productId);
-      showToast('Removed from saved items', 'info');
-      setItems((prev) => prev.filter((p) => p.id !== productId));
+      const res = await productsApi.toggleWishlist(productId);
+      const isSaved = res.data?.isSaved ?? res.isSaved ?? false;
+      const saves = res.data?.saves ?? res.saves;
+      showToast(isSaved ? 'Added to saved items' : 'Removed from saved items', 'info');
+      if (!isSaved) {
+        setItems((prev) => prev.filter((p) => p.id !== productId));
+      }
+      window.dispatchEvent(
+        new CustomEvent('unimart:wishlist-updated', {
+          detail: { productId, isSaved, saves },
+        })
+      );
     } catch (err: any) {
       showToast(err.message || 'Failed to update wishlist.', 'error');
     }

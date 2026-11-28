@@ -348,7 +348,13 @@ export const productsApi = {
     }),
 
   toggleWishlist: (productId: string) =>
-    request<ApiResponse<{ isSaved: boolean; saves: number }>>(`/api/products/${productId}/wishlist`, {
+    request<
+      ApiResponse<{ isSaved: boolean; saves: number; count?: number }> & {
+        isSaved?: boolean;
+        saves?: number;
+        count?: number;
+      }
+    >(`/api/products/${productId}/wishlist`, {
       method: 'POST',
     }),
 

@@ -296,14 +296,20 @@ function MainLayout() {
     }
     try {
       const res = await productsApi.toggleWishlist(productId);
-      if (!res.data) return;
-      const isSaved = res.data.isSaved;
+      const isSaved = res.data?.isSaved ?? res.isSaved;
+      const saves = res.data?.saves ?? res.saves;
+      if (isSaved === undefined) return;
       showToast(isSaved ? 'Item saved to your Wishlist!' : 'Item removed from Wishlist.', 'info');
+      window.dispatchEvent(
+        new CustomEvent('unimart:wishlist-updated', {
+          detail: { productId, isSaved, saves },
+        })
+      );
       if (selectedProduct && selectedProduct.id === productId) {
         setSelectedProduct({
           ...selectedProduct,
           isSaved,
-          saves: res.data.saves,
+          saves: saves ?? selectedProduct.saves,
         });
       }
     } catch (err: any) {
@@ -347,7 +353,12 @@ function MainLayout() {
         {/* Main Content View */}
         <main ref={mainContentRef} className="flex-1 lg:h-full lg:overflow-y-auto p-3 sm:p-5 lg:p-8 min-w-0 pb-24 lg:pb-8 overscroll-contain">
           {currentView === 'home' && (
-            <HomeDashboard onNavigate={handleNavigate} onOpenAuth={handleOpenAuth} />
+            <HomeDashboard
+              onNavigate={handleNavigate}
+              onOpenAuth={handleOpenAuth}
+              onSelectProduct={handleSelectProduct}
+              onToggleWishlist={handleToggleWishlist}
+            />
           )}
 
           {currentView === 'browse' && (

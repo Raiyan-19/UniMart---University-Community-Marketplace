@@ -111,6 +111,22 @@ export const BrowseMarketplaceView: React.FC<BrowseMarketplaceViewProps> = ({
     fetchProducts();
   }, [search, selectedCategory, selectedCondition, selectedSellerType, sortBy, univFilter]);
 
+  useEffect(() => {
+    const handleWishlistEvent = (e: Event) => {
+      const detail = (e as CustomEvent<{ productId: string; isSaved: boolean; saves?: number }>).detail;
+      if (!detail) return;
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === detail.productId
+            ? { ...p, isSaved: detail.isSaved, saves: detail.saves ?? p.saves }
+            : p
+        )
+      );
+    };
+    window.addEventListener('unimart:wishlist-updated', handleWishlistEvent);
+    return () => window.removeEventListener('unimart:wishlist-updated', handleWishlistEvent);
+  }, []);
+
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     fetchProducts();
@@ -120,13 +136,19 @@ export const BrowseMarketplaceView: React.FC<BrowseMarketplaceViewProps> = ({
     e.stopPropagation();
     try {
       const res = await productsApi.toggleWishlist(productId);
-      if (!res.data) return;
-      const isSaved = res.data.isSaved;
+      const isSaved = res.data?.isSaved ?? res.isSaved;
+      const saves = res.data?.saves ?? res.saves;
+      if (isSaved === undefined) return;
       showToast(isSaved ? 'Added to Saved Items!' : 'Removed from Saved Items.', 'info');
       setProducts((prev) =>
         prev.map((p) =>
-          p.id === productId ? { ...p, isSaved, saves: res.data!.saves } : p
+          p.id === productId ? { ...p, isSaved, saves: saves ?? p.saves } : p
         )
+      );
+      window.dispatchEvent(
+        new CustomEvent('unimart:wishlist-updated', {
+          detail: { productId, isSaved, saves },
+        })
       );
     } catch (err: any) {
       showToast(err.message || 'Please log in to save items.', 'error');
